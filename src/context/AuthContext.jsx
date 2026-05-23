@@ -144,6 +144,8 @@ export function AuthProvider({ children }) {
         if (client) {
             unsubscribe = client.subscribe('account', async () => {
                 try {
+                    const fallback = localStorage.getItem('cookieFallback')
+                    if (!fallback || fallback === '[]') throw new Error('No local session found')
                     const u = await account.get()
                     const normalised = await enrichUser(u)
                     setUser(normalised)
