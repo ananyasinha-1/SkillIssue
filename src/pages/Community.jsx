@@ -333,7 +333,7 @@ export default function Community() {
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             placeholder="Search by name or username…"
-                            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.07] focus:border-accent/30 focus:bg-white/[0.05] text-white placeholder:text-white/20 font-satoshi text-sm outline-none transition-all duration-200"
+                            className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.07] focus:border-accent/30 focus:bg-white/[0.05] text-white placeholder:text-white/20 font-satoshi text-sm outline-none transition-all duration-200"
                         />
                         {search && (
                             <button
