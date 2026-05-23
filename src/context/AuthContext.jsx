@@ -121,6 +121,11 @@ export function AuthProvider({ children }) {
 
         async function init() {
             try {
+                // Prevent 401 network error in console for guest users by checking local session fallback first
+                const fallback = localStorage.getItem('cookieFallback')
+                if (!fallback || fallback === '[]') {
+                    throw new Error('No local session found')
+                }
                 const u = await account.get()
                 const normalised = await enrichUser(u)
                 setUser(normalised)
