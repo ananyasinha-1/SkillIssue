@@ -13,56 +13,19 @@ function GoogleIcon({ className = 'w-5 h-5' }) {
     )
 }
 
-// ── Divider ────────────────────────────────────────────────
-function Divider({ label = 'or' }) {
-    return (
-        <div className="flex items-center gap-3 my-6">
-            <div className="flex-1 h-px bg-white/8" />
-            <span className="font-satoshi text-xs text-white/25 uppercase tracking-widest">{label}</span>
-            <div className="flex-1 h-px bg-white/8" />
-        </div>
-    )
-}
-
-// ── Email Sent Confirmation ────────────────────────────────
-function MagicLinkSent({ email, onBack }) {
-    return (
-        <div className="text-center py-4">
-            <div className="w-16 h-16 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center mx-auto mb-5">
-                <svg className="w-8 h-8 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                </svg>
-            </div>
-            <h3 className="font-clash font-bold text-2xl mb-2">Check your email</h3>
-            <p className="font-satoshi text-sm text-white/40 mb-1">We sent a magic link to</p>
-            <p className="font-satoshi text-sm font-medium text-accent mb-8">{email}</p>
-            <p className="font-satoshi text-xs text-white/25 mb-6">Click the link in the email to sign in. You can close this.</p>
-            <button onClick={onBack} className="font-satoshi text-sm text-white/40 hover:text-white/70 transition-colors">
-                ← Back
-            </button>
-        </div>
-    )
-}
-
 // ══════════════════════════════════════════════════════════
 //   MAIN AUTH MODAL
 // ══════════════════════════════════════════════════════════
 export default function AuthModal({ contextText }) {
-    const { closeAuthModal, signIn, signInWithEmail, signUpWithEmail, signInWithMagicLink } = useAuth()
+    const { closeAuthModal, signIn, sendOtp, verifyOtp } = useAuth()
 
-    // tab: 'google' | 'email'
     const [tab, setTab] = useState('google')
-    // email mode: 'magic' | 'password'
-    const [emailMode, setEmailMode] = useState('magic')
-    // password sub-mode: 'signin' | 'signup'
-    const [passwordMode, setPasswordMode] = useState('signin')
-
+    
     const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
+    const [otp, setOtp] = useState('')
+    const [userId, setUserId] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
-    const [magicSent, setMagicSent] = useState(false)
-    const [successMsg, setSuccessMsg] = useState('')
 
     function clearError() { setError('') }
 
@@ -79,15 +42,15 @@ export default function AuthModal({ contextText }) {
         }
     }
 
-    // ── Magic Link ─────────────────────────────────────────
-    async function handleMagicLink(e) {
+    // ── Send OTP ───────────────────────────────────────────
+    async function handleSendOtp(e) {
         e.preventDefault()
         if (!email.trim()) return setError('Please enter your email.')
         setLoading(true)
         setError('')
         try {
-            await signInWithMagicLink(email.trim())
-            setMagicSent(true)
+            const id = await sendOtp(email.trim())
+            setUserId(id)
         } catch (err) {
             setError(err.message)
         } finally {
@@ -95,20 +58,15 @@ export default function AuthModal({ contextText }) {
         }
     }
 
-    // ── Password ───────────────────────────────────────────
-    async function handlePassword(e) {
+    // ── Verify OTP ─────────────────────────────────────────
+    async function handleVerifyOtp(e) {
         e.preventDefault()
-        if (!email.trim() || !password.trim()) return setError('Please fill in all fields.')
+        if (!otp.trim()) return setError('Please enter the OTP.')
         setLoading(true)
         setError('')
         try {
-            if (passwordMode === 'signin') {
-                await signInWithEmail(email.trim(), password)
-                closeAuthModal()
-            } else {
-                await signUpWithEmail(email.trim(), password)
-                setSuccessMsg('Account created! Check your email to confirm, then sign in.')
-            }
+            await verifyOtp(userId, otp.trim())
+            // closeAuthModal is handled inside AuthContext's verifyOtp
         } catch (err) {
             setError(err.message)
         } finally {
@@ -149,23 +107,25 @@ export default function AuthModal({ contextText }) {
                 </div>
 
                 {/* Tab Toggle */}
-                <div className="flex rounded-xl border border-white/[0.07] bg-white/[0.02] p-1 mb-6">
-                    {[['google', 'Google'], ['email', 'Email']].map(([key, label]) => (
-                        <button
-                            key={key}
-                            onClick={() => { setTab(key); clearError() }}
-                            className={`flex-1 py-2 rounded-lg font-satoshi text-sm font-medium transition-all duration-200 ${tab === key
-                                ? 'bg-accent/15 text-accent border border-accent/20'
-                                : 'text-white/35 hover:text-white/60'
-                                }`}
-                        >
-                            {label}
-                        </button>
-                    ))}
-                </div>
+                {!userId && (
+                    <div className="flex rounded-xl border border-white/[0.07] bg-white/[0.02] p-1 mb-6">
+                        {[['google', 'Google'], ['email', 'Email']].map(([key, label]) => (
+                            <button
+                                key={key}
+                                onClick={() => { setTab(key); clearError() }}
+                                className={`flex-1 py-2 rounded-lg font-satoshi text-sm font-medium transition-all duration-200 ${tab === key
+                                    ? 'bg-accent/15 text-accent border border-accent/20'
+                                    : 'text-white/35 hover:text-white/60'
+                                    }`}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 {/* ── Google Tab ─────────────────────────── */}
-                {tab === 'google' && (
+                {!userId && tab === 'google' && (
                     <div className="space-y-4">
                         <button
                             onClick={handleGoogle}
@@ -191,78 +151,13 @@ export default function AuthModal({ contextText }) {
                     </div>
                 )}
 
-                {/* ── Email Tab ──────────────────────────── */}
+                {/* ── Email Tab (OTP) ──────────────────────────── */}
                 {tab === 'email' && (
                     <>
-                        {/* Email sub-mode toggle */}
-                        <div className="flex gap-2 mb-5">
-                            {[['magic', '✉ Magic Link'], ['password', '🔑 Password']].map(([key, label]) => (
-                                <button
-                                    key={key}
-                                    onClick={() => { setEmailMode(key); clearError() }}
-                                    className={`flex-1 py-1.5 px-3 rounded-lg font-satoshi text-xs font-medium transition-all ${emailMode === key
-                                        ? 'bg-white/10 text-white'
-                                        : 'text-white/30 hover:text-white/50'
-                                        }`}
-                                >
-                                    {label}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* ── Magic Link ─────────────────── */}
-                        {emailMode === 'magic' && (
-                            magicSent ? (
-                                <MagicLinkSent email={email} onBack={() => { setMagicSent(false); setEmail('') }} />
-                            ) : (
-                                <form onSubmit={handleMagicLink} className="space-y-4">
-                                    <div>
-                                        <label className="block font-satoshi text-xs text-white/40 mb-1.5">Email address</label>
-                                        <input
-                                            type="email"
-                                            value={email}
-                                            onChange={e => { setEmail(e.target.value); clearError() }}
-                                            placeholder="you@example.com"
-                                            className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] focus:border-accent/40 text-white placeholder:text-white/20 font-satoshi text-sm outline-none transition-all"
-                                        />
-                                    </div>
-                                    {error && <p className="font-satoshi text-xs text-red-400">{error}</p>}
-                                    <button
-                                        type="submit"
-                                        disabled={loading}
-                                        className="w-full py-3 rounded-xl bg-accent text-navy font-satoshi font-bold text-sm hover:bg-[#6bbcff] transition-all disabled:opacity-50"
-                                    >
-                                        {loading ? 'Sending…' : 'Send Magic Link'}
-                                    </button>
-                                    <p className="font-satoshi text-xs text-white/20 text-center">
-                                        We'll send a sign-in link to your email. No password needed.
-                                    </p>
-                                </form>
-                            )
-                        )}
-
-                        {/* ── Password ───────────────────── */}
-                        {emailMode === 'password' && (
-                            <form onSubmit={handlePassword} className="space-y-4">
-                                {/* Sign In / Sign Up toggle */}
-                                <div className="flex justify-center gap-4 mb-2">
-                                    {[['signin', 'Sign In'], ['signup', 'Sign Up']].map(([key, label]) => (
-                                        <button
-                                            key={key}
-                                            type="button"
-                                            onClick={() => { setPasswordMode(key); clearError() }}
-                                            className={`font-satoshi text-sm pb-1 border-b transition-all ${passwordMode === key
-                                                ? 'text-white border-accent'
-                                                : 'text-white/30 border-transparent hover:text-white/50'
-                                                }`}
-                                        >
-                                            {label}
-                                        </button>
-                                    ))}
-                                </div>
-
+                        {!userId ? (
+                            <form onSubmit={handleSendOtp} className="space-y-4">
                                 <div>
-                                    <label className="block font-satoshi text-xs text-white/40 mb-1.5">Email</label>
+                                    <label className="block font-satoshi text-xs text-white/40 mb-1.5">Email address</label>
                                     <input
                                         type="email"
                                         value={email}
@@ -271,26 +166,49 @@ export default function AuthModal({ contextText }) {
                                         className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] focus:border-accent/40 text-white placeholder:text-white/20 font-satoshi text-sm outline-none transition-all"
                                     />
                                 </div>
-                                <div>
-                                    <label className="block font-satoshi text-xs text-white/40 mb-1.5">Password</label>
-                                    <input
-                                        type="password"
-                                        value={password}
-                                        onChange={e => { setPassword(e.target.value); clearError() }}
-                                        placeholder="••••••••"
-                                        className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] focus:border-accent/40 text-white placeholder:text-white/20 font-satoshi text-sm outline-none transition-all"
-                                    />
-                                </div>
-
                                 {error && <p className="font-satoshi text-xs text-red-400">{error}</p>}
-                                {successMsg && <p className="font-satoshi text-xs text-emerald-400">{successMsg}</p>}
-
                                 <button
                                     type="submit"
                                     disabled={loading}
                                     className="w-full py-3 rounded-xl bg-accent text-navy font-satoshi font-bold text-sm hover:bg-[#6bbcff] transition-all disabled:opacity-50"
                                 >
-                                    {loading ? 'Please wait…' : passwordMode === 'signin' ? 'Sign In' : 'Create Account'}
+                                    {loading ? 'Sending OTP…' : 'Send OTP'}
+                                </button>
+                                <p className="font-satoshi text-xs text-white/20 text-center">
+                                    We'll send a one-time password to your email.
+                                </p>
+                            </form>
+                        ) : (
+                            <form onSubmit={handleVerifyOtp} className="space-y-4">
+                                <div className="text-center mb-4">
+                                    <p className="font-satoshi text-sm text-white/40 mb-1">Enter the code sent to</p>
+                                    <p className="font-satoshi text-sm font-medium text-accent">{email}</p>
+                                </div>
+                                <div>
+                                    <label className="block font-satoshi text-xs text-white/40 mb-1.5">One-Time Password</label>
+                                    <input
+                                        type="text"
+                                        value={otp}
+                                        onChange={e => { setOtp(e.target.value); clearError() }}
+                                        placeholder="123456"
+                                        className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] focus:border-accent/40 text-white placeholder:text-white/20 font-satoshi text-sm outline-none transition-all text-center tracking-[0.5em]"
+                                        maxLength={6}
+                                    />
+                                </div>
+                                {error && <p className="font-satoshi text-xs text-red-400">{error}</p>}
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="w-full py-3 rounded-xl bg-accent text-navy font-satoshi font-bold text-sm hover:bg-[#6bbcff] transition-all disabled:opacity-50"
+                                >
+                                    {loading ? 'Verifying…' : 'Verify & Sign In'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => { setUserId(null); setOtp(''); clearError() }}
+                                    className="w-full py-2 font-satoshi text-sm text-white/40 hover:text-white/70 transition-colors"
+                                >
+                                    ← Back to Email
                                 </button>
                             </form>
                         )}

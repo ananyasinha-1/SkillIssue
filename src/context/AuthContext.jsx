@@ -172,46 +172,27 @@ export function AuthProvider({ children }) {
         })
     }
 
-    async function signInWithEmail(email, password) {
+    async function sendOtp(email) {
+        if (USE_MOCK_AUTH) {
+            return MOCK_USER.$id
+        }
+        const token = await account.createEmailToken(ID.unique(), email)
+        return token.userId
+    }
+
+    async function verifyOtp(userId, secret) {
         if (USE_MOCK_AUTH) {
             setUser(MOCK_USER)
             setProfile(MOCK_PROFILE)
             setShowAuthModal(false)
             return
         }
-        await account.createEmailPasswordSession({ email, password })
+        await account.createSession(userId, secret)
         const u = await account.get()
         const normalised = await enrichUser(u)
         setUser(normalised)
         await fetchProfile(u.$id)
         setShowAuthModal(false)
-    }
-
-    async function signUpWithEmail(email, password) {
-        if (USE_MOCK_AUTH) {
-            setUser(MOCK_USER)
-            setProfile(MOCK_PROFILE)
-            setShowAuthModal(false)
-            return
-        }
-        const newUser = await account.create(ID.unique(), email, password)
-        await signInWithEmail(email, password)
-        return newUser
-    }
-
-    async function signInWithMagicLink(email) {
-        if (USE_MOCK_AUTH) {
-            setUser(MOCK_USER)
-            setProfile(MOCK_PROFILE)
-            setShowAuthModal(false)
-            return
-        }
-        await account.createMagicURLToken(
-            ID.unique(),
-            email,
-            `${window.location.origin}/auth/callback`
-        )
-        // No session yet — user must click the email link
     }
 
     async function signOut() {
@@ -242,9 +223,8 @@ export function AuthProvider({ children }) {
         openAuthModal: () => USE_MOCK_AUTH ? signIn() : setShowAuthModal(true),
         closeAuthModal: () => setShowAuthModal(false),
         signIn,
-        signInWithEmail,
-        signUpWithEmail,
-        signInWithMagicLink,
+        sendOtp,
+        verifyOtp,
         signOut,
         refreshProfile,
     }
