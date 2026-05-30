@@ -1,7 +1,7 @@
 import { Client, Account, Databases, Storage, ID, Query, Permission, Role, OAuthProvider } from 'appwrite'
 
-const endpoint = import.meta.env.VITE_APPWRITE_ENDPOINT
-const projectId = import.meta.env.VITE_APPWRITE_PROJECT_ID
+const endpoint = import.meta.env.VITE_APPWRITE_ENDPOINT || 'https://fra.cloud.appwrite.io/v1'
+const projectId = import.meta.env.VITE_APPWRITE_PROJECT_ID || '6a11b59f001bcc45bd94'
 
 export const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID ?? 'skill-issue-db'
 export const USERS_TABLE_ID = import.meta.env.VITE_APPWRITE_USERS_TABLE_ID ?? 'users'
@@ -23,6 +23,13 @@ export const storage = isAppwriteConfigured ? new Storage(client) : null
 
 // Re-export helpers so service files don't need to import from 'appwrite' directly
 export { ID, Query, Permission, Role, OAuthProvider }
+
+if (client) {
+    // Ping backend to verify setup
+    client.ping()
+        .then(() => console.log('Appwrite successfully connected! 🎉'))
+        .catch(err => console.error('Appwrite connection failed:', err));
+}
 
 if (!isAppwriteConfigured) {
     console.warn('⚠️  Appwrite: VITE_APPWRITE_ENDPOINT / VITE_APPWRITE_PROJECT_ID not set — running without auth.')

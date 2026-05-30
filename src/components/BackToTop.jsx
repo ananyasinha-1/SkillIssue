@@ -9,7 +9,7 @@ export default function BackToTop({ threshold = 300 }) {
         return () => window.removeEventListener('scroll', onScroll)
     }, [threshold])
 
-    const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
+    const scrollToTop = () => window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
 
     if (!visible) return null
 
@@ -17,7 +17,7 @@ export default function BackToTop({ threshold = 300 }) {
         <button
             onClick={scrollToTop}
             aria-label="Back to top"
-            className="fixed bottom-6 right-6 z-50 flex items-center justify-center w-11 h-11 rounded-full bg-primary text-primary-foreground shadow-lg transition-all duration-200 hover:scale-110 hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="fixed bottom-6 right-6 z-[60] flex items-center justify-center w-11 h-11 rounded-full bg-primary text-primary-foreground shadow-lg transition-all duration-200 hover:scale-110 hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
             <svg
                 xmlns="http://www.w3.org/2000/svg"
