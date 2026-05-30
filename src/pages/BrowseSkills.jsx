@@ -1876,18 +1876,51 @@ export default function BrowseSkills() {
                 )}
 
                 {/* ── Empty state ─────────────────────────────────────────── */}
-                {!loading && !dbLoading && !indexedLoading && !isSearchPending && filteredOfficial.length === 0 && filteredCommunity.length === 0 && filteredOpenClaw.length === 0 && filteredDbSkills.length === 0 && filteredIndexed.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
-                        <div className="w-14 h-14 rounded-2xl bg-accent/5 border border-accent/10 flex items-center justify-center">
-                            <svg className="w-6 h-6 text-accent/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                            </svg>
-                        </div>
-                        <p className="font-clash font-semibold text-white/25 text-lg">No skills found</p>
-                        <p className="font-satoshi text-sm text-white/15">{searchQuery ? 'Try a different search term' : 'Try selecting a different filter'}</p>
-                    </div>
-                )}
+{!loading &&
+  !dbLoading &&
+  !indexedLoading &&
+  !isSearchPending &&
+  filteredOfficial.length === 0 &&
+  filteredCommunity.length === 0 &&
+  filteredOpenClaw.length === 0 &&
+  filteredDbSkills.length === 0 &&
+  filteredIndexed.length === 0 && (
+    <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
+      
+      <div className="w-20 h-20 rounded-3xl bg-accent/10 border border-accent/20 flex items-center justify-center shadow-lg">
+        <svg
+          className="w-10 h-10 text-accent/50"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.5}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+          />
+        </svg>
+      </div>
 
+      <h2 className="font-clash font-semibold text-white text-2xl">
+        No matching skills found
+      </h2>
+
+      <p className="font-satoshi text-sm text-white/50 max-w-md mx-auto">
+  We couldn't find any matching skills. Try a different keyword or reset your search to explore more skills.
+</p>
+
+      {searchQuery && (
+        <button
+          onClick={() => setSearchQuery("")}
+          className="mt-2 px-5 py-2 rounded-xl bg-accent text-black font-medium hover:scale-105 transition-all duration-300"
+        >
+          Clear Search
+        </button>
+      )}
+    </div>
+)}
             </div>
 
             {/* ── GitHub Skill Detail Modal ────────── */}
