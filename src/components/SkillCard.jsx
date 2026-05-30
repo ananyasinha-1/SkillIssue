@@ -76,7 +76,8 @@ export default function SkillCard({ skill, onCopy, onClick, onDelete, onMakePriv
 
     return (
         <div
-            className={`skill-card-enter skill-card-hover-wrap group relative bg-gradient-to-b from-navy-50 to-navy border border-white/[0.08] rounded-3xl p-6 hover:border-accent/30 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:scale-[1.02] flex flex-col gap-5 shadow-sm hover:shadow-[0_0_35px_rgba(75,169,255,0.08)] ${cat.glow} ${onClick ? 'cursor-pointer' : ''}`}
+            className={`skill-card-enter group relative bg-gradient-to-b from-navy-50 to-navy border border-white/[0.06] rounded-2xl p-5 hover:border-accent/25 transition-all duration-400 hover:-translate-y-1 flex flex-col gap-4 ${cat.glow} ${onClick ? 'cursor-pointer' : ''}`}
+            style={{ animationDelay: `${index * 80}ms` }}
             onClick={() => onClick?.(skill)}
         >
             {/* Subtle top edge highlight */}
