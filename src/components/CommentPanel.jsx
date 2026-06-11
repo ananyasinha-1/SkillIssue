@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 
 function Avatar({ username, avatarUrl, size = 7 }) {
-    const fallback = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(username || 'anon')}`
+    const fallback = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(username[0] || 'anon')}`
     return (
         <img
             src={avatarUrl || fallback}
