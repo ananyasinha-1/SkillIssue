@@ -10,6 +10,7 @@ import Breadcrumbs from '../components/Breadcrumbs'
 import SkillViewer from '../components/SkillViewer'
 import SkillActionBar from '../components/SkillActionBar'
 import Toast from '../components/Toast'
+import { StandaloneCommentDrawer } from '../components/CommentPanel'
 
 const SITE = import.meta.env.VITE_SITE_URL || 'https://www.skillissue.bajpai.tech'
 
@@ -40,6 +41,7 @@ export default function SkillDetailPage() {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [working, setWorking] = useState(false)
     const [toast, setToast] = useState(null)
+    const [commentsOpen, setCommentsOpen] = useState(false)
 
     useEffect(() => {
         if (!id) return
@@ -253,6 +255,7 @@ export default function SkillDetailPage() {
                             { key: 'copy', icon: 'copy', label: copied ? 'Copied!' : 'Copy', ariaLabel: 'Copy skill markdown', onClick: handleCopy, status: copied ? 'success' : undefined },
                             { key: 'share', icon: 'share', label: linkCopied ? 'Link copied!' : 'Share', ariaLabel: 'Share skill link', onClick: handleShare, status: linkCopied ? 'success' : undefined },
                             { key: 'download', icon: 'download', label: '.md', ariaLabel: 'Download markdown file', onClick: handleDownload, primary: true },
+                            { key: 'comments', icon: 'comments', label: 'Comments', ariaLabel: 'View comments', onClick: () => setCommentsOpen(o => !o), active: commentsOpen },
                         ]}
                         secondaryActions={[
                             isGuest && { key: 'signin', icon: 'save', label: 'Sign in to Save', ariaLabel: 'Sign in to save skill', onClick: openAuthModal },
@@ -280,6 +283,18 @@ export default function SkillDetailPage() {
             </main>
 
             <Toast message={toast} onDismiss={() => setToast(null)} />
+
+            <StandaloneCommentDrawer
+                open={commentsOpen}
+                onClose={() => setCommentsOpen(false)}
+                skillId={skill.id}
+                skillTitle={skill.title}
+                user={authUser}
+                userProfile={authProfile}
+                comments={[]}
+                loadingComments={false}
+                onSubmitComment={(text) => { console.log('submit comment:', text) }}
+            />
 
             {showDeleteConfirm && (
                 <ConfirmDialog
