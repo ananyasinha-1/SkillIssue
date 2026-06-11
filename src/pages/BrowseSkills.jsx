@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, Fragment } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import JSZip from 'jszip'
 import { useAuth } from '../context/AuthContext'
+import { useDebounce } from '../hooks/useDebounce' 
 import SEO, { jsonLdSchemas } from '../components/SEO'
 import Breadcrumbs from '../components/Breadcrumbs'
 import {
@@ -405,14 +406,10 @@ export default function BrowseSkills() {
     const OC_PAGE_SIZE = 48
     const [ocPage, setOcPage] = useState(1)
 
-    // Debounced search for server-side queries (indexed + DB skills)
-    const [debouncedSearch, setDebouncedSearch] = useState('')
-    useEffect(() => {
-        const timer = setTimeout(() => setDebouncedSearch(searchQuery), 250)
-        return () => clearTimeout(timer)
-    }, [searchQuery])
-
-    // True while user is still typing and server hasn't re-fetched yet
+    // Clean custom hook for search debouncing (applied to both API and local filters)
+    const debouncedSearch = useDebounce(searchQuery, 300)
+    
+    // True while user is still typing and UI hasn't updated yet
     const isSearchPending = searchQuery !== debouncedSearch
 
     // ─ DB community skills state
@@ -553,7 +550,7 @@ export default function BrowseSkills() {
 
     const companies = ['All', SKILL_ISSUE_FILTER, DISCOVERED_FILTER, ...FEATURED_SOURCES.map((s) => s.company), ...communityFilterIds]
 
-    const q = searchQuery.toLowerCase().trim()
+const q = debouncedSearch.toLowerCase().trim()
 
     const filteredOfficial = officialSkills.filter((s) => {
         if (isCommunityFilter || isSkillIssueFilter || isDiscoveredFilter) return false
