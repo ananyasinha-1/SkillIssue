@@ -130,6 +130,7 @@ function CommentList({ comments, loadingComments }) {
     )
 }
 
+
 export default function CommentPanel({
     open,
     onClose,
@@ -177,7 +178,7 @@ export default function CommentPanel({
                 className={`absolute top-0 right-0 bottom-0 z-20 flex flex-col bg-[#080b14] border-l border-white/[0.07] shadow-2xl transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : 'translate-x-full'}`}
                 style={{ width: 'min(360px, 100%)' }}
             >
-               
+                
                 <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] shrink-0">
                     <div className="flex items-center gap-2">
                         <svg className="w-4 h-4 text-accent/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -207,6 +208,7 @@ export default function CommentPanel({
                     <CommentList comments={comments} loadingComments={loadingComments} />
                 </div>
 
+                
                 <div className="shrink-0 px-4 py-3 border-t border-white/[0.06] bg-white/[0.01]">
                     <CommentComposer
                         user={user}
@@ -221,6 +223,7 @@ export default function CommentPanel({
         </>
     )
 }
+
 
 export function StandaloneCommentDrawer({
     open,
@@ -255,12 +258,14 @@ export function StandaloneCommentDrawer({
 
     return (
         <>
+            
             <div
                 className={`fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
                 onClick={onClose}
                 aria-hidden="true"
             />
 
+            
             <div
                 role="complementary"
                 aria-label="Comments"
@@ -295,10 +300,12 @@ export function StandaloneCommentDrawer({
                     </button>
                 </div>
 
+                
                 <div ref={listRef} className="flex-1 overflow-y-auto styled-scrollbar px-5 py-4 space-y-5">
                     <CommentList comments={comments} loadingComments={loadingComments} />
                 </div>
 
+                
                 <div className="shrink-0 px-5 py-4 border-t border-white/[0.06] bg-white/[0.01]">
                     <CommentComposer
                         user={user}
