@@ -1004,3 +1004,20 @@ body {
         transform: translateY(0);
     }
 }
+
+/* ── Skill Hover Preview ────────────────────────────────────
+   The preview panel sits inside a `position: relative` card.
+   We need the card to NOT clip its overflow so the panel is
+   fully visible above/below.  Cards already have `relative`
+   from Tailwind; we just lift the overflow constraint here.
+   ─────────────────────────────────────────────────────────── */
+.skill-card-hover-wrap {
+    overflow: visible !important;
+}
+
+/* Disable hover previews on coarse-pointer devices (touch) */
+@media (hover: none) {
+    .skill-hover-preview {
+        display: none !important;
+    }
+}

@@ -24,6 +24,7 @@ import { saveSkill, getAllPublicSkills } from '../lib/skillService'
 import { toggleSavedSkill, getProfilesByUserIds } from '../lib/userService'
 import { invalidateProfileCache } from '../lib/profileCache'
 import UserSkillModal from '../components/UserSkillModal'
+import SkillHoverPreview from '../components/SkillHoverPreview'
 import ModalShell from '../components/ModalShell'
 import SkillViewer from '../components/SkillViewer'
 import SkillActionBar from '../components/SkillActionBar'
@@ -278,11 +279,24 @@ function DbSkillCard({ skill, uploaderProfile, onClick, index = 0 }) {
     return (
         <div
             onClick={() => onClick(skill)}
-            className="skill-card-enter group relative bg-gradient-to-b from-navy-50 to-navy border border-white/[0.06] rounded-2xl p-5 hover:border-accent/20 hover:shadow-[0_0_30px_rgba(75,169,255,0.06)] transition-all duration-400 hover:-translate-y-1 flex flex-col gap-4 cursor-pointer"
+            className="skill-card-enter skill-card-hover-wrap group relative bg-gradient-to-b from-navy-50 to-navy border border-white/[0.06] rounded-2xl p-5 hover:border-accent/20 hover:shadow-[0_0_30px_rgba(75,169,255,0.06)] transition-all duration-400 hover:-translate-y-1 flex flex-col gap-4 cursor-pointer"
             style={{ animationDelay: `${index * 60}ms` }}
         >
             {/* Top edge highlight */}
             <div className="absolute top-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-accent/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+            {/* ── Hover Preview Overlay ── */}
+            <SkillHoverPreview
+                title={title}
+                description={description}
+                subtitle={`by @${username}${category ? ` · ${category}` : ''}`}
+                author={`@${username}`}
+                avatarUrl={avatarUrl}
+                tags={Array.isArray(skill.tags) ? skill.tags : []}
+                category={category}
+                onDownload={() => handleDownloadZip({ stopPropagation: () => {} })}
+                position="top"
+            />
 
             {/* Header row: user avatar + username + community tag */}
             <div className="flex items-center justify-between">

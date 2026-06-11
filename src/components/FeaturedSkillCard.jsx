@@ -1,14 +1,16 @@
-import { getOrgAvatarUrl, getUserAvatarUrl } from '../lib/githubService'
+import { getOrgAvatarUrl, getUserAvatarUrl, fetchSkillFiles, fetchFileContentByPath } from '../lib/githubService'
+import { parseSkillFile } from '../lib/parseSkillFile'
+import SkillHoverPreview from './SkillHoverPreview'
 
 // ── Official card (Anthropic, Vercel, OpenAI, HuggingFace) ──────────────
 function OfficialCard({ skill, onClick, onDownload, isDownloading }) {
     const { displayName, company, stars, repo } = skill
 
     const companyColors = {
-        Anthropic: { badge: 'bg-orange-500/10 text-orange-300 border-orange-500/20', glow: 'group-hover:shadow-[0_0_30px_rgba(249,115,22,0.08)]' },
-        Vercel: { badge: 'bg-white/10 text-white/80 border-white/20', glow: 'group-hover:shadow-[0_0_30px_rgba(255,255,255,0.06)]' },
-        OpenAI: { badge: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20', glow: 'group-hover:shadow-[0_0_30px_rgba(16,185,129,0.08)]' },
-        HuggingFace: { badge: 'bg-yellow-500/10 text-yellow-300 border-yellow-500/20', glow: 'group-hover:shadow-[0_0_30px_rgba(234,179,8,0.08)]' },
+        Anthropic: { badge: 'bg-orange-500/10 text-orange-300 border-orange-500/20', glow: 'group-hover:shadow-[0_0_30px_rgba(249,115,22,0.08)]', accent: 'text-orange-300', border: 'border-orange-400/30' },
+        Vercel: { badge: 'bg-white/10 text-white/80 border-white/20', glow: 'group-hover:shadow-[0_0_30px_rgba(255,255,255,0.06)]', accent: 'text-white/60', border: 'border-white/20' },
+        OpenAI: { badge: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20', glow: 'group-hover:shadow-[0_0_30px_rgba(16,185,129,0.08)]', accent: 'text-emerald-300', border: 'border-emerald-400/30' },
+        HuggingFace: { badge: 'bg-yellow-500/10 text-yellow-300 border-yellow-500/20', glow: 'group-hover:shadow-[0_0_30px_rgba(234,179,8,0.08)]', accent: 'text-yellow-300', border: 'border-yellow-400/30' },
     }
     const cc = companyColors[company] ?? companyColors.OpenAI
 
@@ -20,10 +22,33 @@ function OfficialCard({ skill, onClick, onDownload, isDownloading }) {
     return (
         <div
             onClick={() => onClick(skill)}
-            className={`group relative bg-gradient-to-b from-navy-50 to-navy border border-white/[0.06] rounded-2xl p-5 hover:border-emerald-400/25 transition-all duration-400 hover:-translate-y-1 flex flex-col gap-4 cursor-pointer ${cc.glow}`}
+            className={`skill-card-hover-wrap group relative bg-gradient-to-b from-navy-50 to-navy border border-white/[0.06] rounded-2xl p-5 hover:border-emerald-400/25 transition-all duration-400 hover:-translate-y-1 flex flex-col gap-4 cursor-pointer ${cc.glow}`}
         >
             {/* Top edge highlight */}
             <div className="absolute top-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-emerald-400/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+            {/* ── Hover Preview Overlay ── */}
+            <SkillHoverPreview
+                title={displayName}
+                description={skill.description || null}
+                subtitle={`by ${company} · ${skill.name}`}
+                fetchDescription={async () => {
+                    const files = await fetchSkillFiles(repo, skill.path)
+                    const mdFile = files.find(f => f.name.toLowerCase().endsWith('.md'))
+                    if (!mdFile) return null
+                    const content = await fetchFileContentByPath(repo, mdFile.path)
+                    const { description } = parseSkillFile(content, mdFile.name)
+                    return description || null
+                }}
+                author={`by ${company}`}
+                avatarUrl={getOrgAvatarUrl(repo)}
+                tags={skill.tags || []}
+                category={company}
+                onDownload={() => onDownload(skill)}
+                accentClass={cc.accent}
+                borderClass={cc.border}
+                position="top"
+            />
 
             {/* Header row: avatar + verified */}
             <div className="flex items-center justify-between">
@@ -116,10 +141,33 @@ function CommunityCard({ skill, onClick, onDownload, isDownloading }) {
     return (
         <div
             onClick={() => onClick(skill)}
-            className="group relative bg-gradient-to-b from-navy-50 to-navy border border-white/[0.06] rounded-2xl p-5 hover:border-violet-400/25 transition-all duration-400 hover:-translate-y-1 flex flex-col gap-4 cursor-pointer group-hover:shadow-[0_0_30px_rgba(139,92,246,0.08)]"
+            className="skill-card-hover-wrap group relative bg-gradient-to-b from-navy-50 to-navy border border-white/[0.06] rounded-2xl p-5 hover:border-violet-400/25 transition-all duration-400 hover:-translate-y-1 flex flex-col gap-4 cursor-pointer group-hover:shadow-[0_0_30px_rgba(139,92,246,0.08)]"
         >
             {/* Top edge highlight */}
             <div className="absolute top-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-violet-400/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+            {/* ── Hover Preview Overlay ── */}
+            <SkillHoverPreview
+                title={displayName}
+                description={skill.description || null}
+                subtitle={`by @${author} · ${name}`}
+                fetchDescription={async () => {
+                    const files = await fetchSkillFiles(skill.repo, skill.path)
+                    const mdFile = files.find(f => f.name.toLowerCase().endsWith('.md'))
+                    if (!mdFile) return null
+                    const content = await fetchFileContentByPath(skill.repo, mdFile.path)
+                    const { description } = parseSkillFile(content, mdFile.name)
+                    return description || null
+                }}
+                author={`@${author}`}
+                avatarUrl={getUserAvatarUrl(author)}
+                tags={skill.tags || []}
+                category="Community"
+                onDownload={() => onDownload(skill)}
+                accentClass="text-violet-300"
+                borderClass="border-violet-400/30"
+                position="top"
+            />
 
             {/* Header row: user avatar + community tag */}
             <div className="flex items-center justify-between">
@@ -217,10 +265,33 @@ function IndexedCard({ skill, onClick, onDownload, isDownloading }) {
     return (
         <div
             onClick={() => onClick(skill)}
-            className="group relative bg-gradient-to-b from-navy-50 to-navy border border-white/[0.06] rounded-2xl p-5 hover:border-amber-400/25 transition-all duration-400 hover:-translate-y-1 flex flex-col gap-4 cursor-pointer group-hover:shadow-[0_0_30px_rgba(245,158,11,0.08)]"
+            className="skill-card-hover-wrap group relative bg-gradient-to-b from-navy-50 to-navy border border-white/[0.06] rounded-2xl p-5 hover:border-amber-400/25 transition-all duration-400 hover:-translate-y-1 flex flex-col gap-4 cursor-pointer group-hover:shadow-[0_0_30px_rgba(245,158,11,0.08)]"
         >
             {/* Top edge highlight */}
             <div className="absolute top-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-amber-400/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+            {/* ── Hover Preview Overlay ── */}
+            <SkillHoverPreview
+                title={displayName}
+                description={skill.description || null}
+                subtitle={`by ${company} · ${skill.name}`}
+                fetchDescription={async () => {
+                    const files = await fetchSkillFiles(repo, skill.path)
+                    const mdFile = files.find(f => f.name.toLowerCase().endsWith('.md'))
+                    if (!mdFile) return null
+                    const content = await fetchFileContentByPath(repo, mdFile.path)
+                    const { description } = parseSkillFile(content, mdFile.name)
+                    return description || null
+                }}
+                author={`by ${company}`}
+                avatarUrl={ownerAvatar || `https://avatars.githubusercontent.com/${company}`}
+                tags={skill.tags || []}
+                category="Discovered"
+                onDownload={() => onDownload(skill)}
+                accentClass="text-amber-300"
+                borderClass="border-amber-400/30"
+                position="top"
+            />
 
             {/* Header row: avatar + discovered tag */}
             <div className="flex items-center justify-between">

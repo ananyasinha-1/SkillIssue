@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import ConfirmDialog from './ConfirmDialog'
+import SkillHoverPreview from './SkillHoverPreview'
 
 // Reusable skill card for profile pages and explore feeds
 export default function SkillCard({ skill, onCopy, onClick, onDelete, onMakePrivate, isPrivate = false, isOwner = false, index = 0 }) {
@@ -10,6 +11,7 @@ export default function SkillCard({ skill, onCopy, onClick, onDelete, onMakePriv
     const {
         id, title, description, category, tags = [],
         star_count = 0, copy_count = 0, $createdAt, created_at,
+        username, display_name,
     } = skill
 
     const ago = (() => {
@@ -26,7 +28,7 @@ export default function SkillCard({ skill, onCopy, onClick, onDelete, onMakePriv
     })()
 
     async function handleShare(e) {
-        e.stopPropagation()
+        e?.stopPropagation()
         const url = `${import.meta.env.VITE_SITE_URL || 'https://www.skillissue.bajpai.tech'}/skill/${id}`
         if (navigator.share) {
             try { await navigator.share({ title, url }) } catch { /* cancelled */ }
@@ -36,6 +38,13 @@ export default function SkillCard({ skill, onCopy, onClick, onDelete, onMakePriv
             setTimeout(() => setLinkCopied(false), 2000)
         }
     }
+
+    // Normalize tags — skill.tags may be string[] or comma-string
+    const normalizedTags = Array.isArray(tags)
+        ? tags
+        : typeof tags === 'string'
+            ? tags.split(',').map(t => t.trim()).filter(Boolean)
+            : []
 
     const categoryColors = {
         coding: {
@@ -67,11 +76,28 @@ export default function SkillCard({ skill, onCopy, onClick, onDelete, onMakePriv
 
     return (
         <div
-            className={`skill-card-enter group relative bg-gradient-to-b from-navy-50 to-navy border border-white/[0.08] rounded-3xl p-6 hover:border-accent/30 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:scale-[1.02] flex flex-col gap-5 shadow-sm hover:shadow-[0_0_35px_rgba(75,169,255,0.08)] ${cat.glow} ${onClick ? 'cursor-pointer' : ''}`}
+            className={`skill-card-enter group relative bg-gradient-to-b from-navy-50 to-navy border border-white/[0.06] rounded-2xl p-5 hover:border-accent/25 transition-all duration-400 hover:-translate-y-1 flex flex-col gap-4 ${cat.glow} ${onClick ? 'cursor-pointer' : ''}`}
+            style={{ animationDelay: `${index * 80}ms` }}
             onClick={() => onClick?.(skill)}
         >
             {/* Subtle top edge highlight */}
             <div className="absolute top-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-accent/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+            {/* ── Hover Preview Overlay ── */}
+            <SkillHoverPreview
+                title={title}
+                description={description}
+                subtitle={[
+                    username ? `@${username}` : (display_name || null),
+                    category,
+                ].filter(Boolean).join(' · ')}
+                author={username ? `@${username}` : (display_name || null)}
+                tags={normalizedTags}
+                category={category}
+                onShare={id ? handleShare : undefined}
+                onCopy={onCopy && !isPrivate && !isOwner ? () => onCopy(skill) : undefined}
+                position="top"
+            />
 
             {/* Private badge */}
             {isPrivate && (
