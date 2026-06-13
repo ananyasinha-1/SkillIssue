@@ -11,6 +11,7 @@ import SkillViewer from '../components/SkillViewer'
 import SkillActionBar from '../components/SkillActionBar'
 import Toast from '../components/Toast'
 import { StandaloneCommentDrawer } from '../components/CommentPanel'
+import { useComments } from '../hooks/useComments'
 
 const SITE = import.meta.env.VITE_SITE_URL || 'https://www.skillissue.bajpai.tech'
 
@@ -42,6 +43,13 @@ export default function SkillDetailPage() {
     const [working, setWorking] = useState(false)
     const [toast, setToast] = useState(null)
     const [commentsOpen, setCommentsOpen] = useState(false)
+    const { comments, loadingComments, submitting: commentSubmitting, submitComment, removeComment } = useComments({
+        skillId: skill?.id,
+        skillType: 'db',
+        open: commentsOpen,
+        user: authUser,
+        profile: authProfile,
+    })
 
     useEffect(() => {
         if (!id) return
@@ -291,9 +299,11 @@ export default function SkillDetailPage() {
                 skillTitle={skill.title}
                 user={authUser}
                 userProfile={authProfile}
-                comments={[]}
-                loadingComments={false}
-                onSubmitComment={(text) => { console.log('submit comment:', text) }}
+                comments={comments}
+                loadingComments={loadingComments}
+                submitting={commentSubmitting}
+                onSubmitComment={submitComment}
+                onDeleteComment={removeComment}
             />
 
             {showDeleteConfirm && (

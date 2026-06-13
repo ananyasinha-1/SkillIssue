@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 
 function Avatar({ username, avatarUrl, size = 7 }) {
-    const fallback = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(username[0] || 'anon')}`
+    const seed = encodeURIComponent((username || 'anon')[0])
+    const fallback = `https://api.dicebear.com/7.x/initials/svg?seed=${seed}`
     return (
         <img
             src={avatarUrl || fallback}
@@ -24,18 +25,32 @@ function timeAgo(dateStr) {
     return `${Math.floor(d / 30)}mo ago`
 }
 
-function CommentItem({ comment }) {
+function CommentItem({ comment, currentUserId, onDelete }) {
+    const isOwner = !!(currentUserId && comment.user_id === currentUserId)
+    const isOptimistic = !!comment._optimistic
     return (
-        <div className="flex gap-3">
-            <Avatar username={comment.username} avatarUrl={comment.avatarUrl} size={7} />
+        <div className={`flex gap-3 group ${isOptimistic ? 'opacity-50' : ''}`}>
+            <Avatar username={comment.username} avatarUrl={comment.avatar_url} size={7} />
             <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-1">
                     <span className="font-satoshi text-xs font-semibold text-white/70">
                         @{comment.username}
                     </span>
                     <span className="font-satoshi text-[10px] text-white/25">
-                        {timeAgo(comment.created_at)}
+                        {timeAgo(comment.$createdAt || comment.created_at)}
                     </span>
+                    {isOwner && !isOptimistic && (
+                        <button
+                            type="button"
+                            onClick={() => onDelete?.(comment.id)}
+                            aria-label="Delete comment"
+                            className="ml-auto opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/10 text-white/20 hover:text-red-400/70 transition-all"
+                        >
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    )}
                 </div>
                 <p className="font-satoshi text-sm text-white/55 leading-relaxed break-words">
                     {comment.body}
@@ -101,9 +116,9 @@ function CommentComposer({ user, userProfile, draft, setDraft, onSubmit, submitt
     )
 }
 
-function CommentList({ comments, loadingComments }) {
+function CommentList({ comments, loadingComments, currentUserId, onDelete }) {
     return (
-        <div className="flex-1 overflow-y-auto styled-scrollbar px-4 py-4 space-y-5">
+        <div className="space-y-5">
             {loadingComments && (
                 <div className="flex items-center justify-center py-10">
                     <svg className="w-5 h-5 text-accent animate-spin" fill="none" viewBox="0 0 24 24">
@@ -124,9 +139,35 @@ function CommentList({ comments, loadingComments }) {
                 </div>
             )}
             {!loadingComments && comments.map((c) => (
-                <CommentItem key={c.id} comment={c} />
+                <CommentItem key={c.id} comment={c} currentUserId={currentUserId} onDelete={onDelete} />
             ))}
         </div>
+    )
+}
+
+
+function PanelContent({ comments, loadingComments, currentUserId, onDelete, user, userProfile, draft, setDraft, onSubmit, submitting, listRef }) {
+    return (
+        <>
+            <div ref={listRef} className="flex-1 overflow-y-auto styled-scrollbar px-4 py-4">
+                <CommentList
+                    comments={comments}
+                    loadingComments={loadingComments}
+                    currentUserId={currentUserId}
+                    onDelete={onDelete}
+                />
+            </div>
+            <div className="shrink-0 px-4 py-3 border-t border-white/[0.06] bg-white/[0.01]">
+                <CommentComposer
+                    user={user}
+                    userProfile={userProfile}
+                    draft={draft}
+                    setDraft={setDraft}
+                    onSubmit={onSubmit}
+                    submitting={submitting}
+                />
+            </div>
+        </>
     )
 }
 
@@ -140,19 +181,15 @@ export default function CommentPanel({
     comments = [],
     loadingComments = false,
     onSubmitComment,
+    onDeleteComment,
     submitting = false,
 }) {
     const [draft, setDraft] = useState('')
     const listRef = useRef(null)
 
+    useEffect(() => { if (!open) setDraft('') }, [open])
     useEffect(() => {
-        if (!open) setDraft('')
-    }, [open])
-
-    useEffect(() => {
-        if (open && listRef.current) {
-            listRef.current.scrollTop = listRef.current.scrollHeight
-        }
+        if (open && listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight
     }, [comments.length, open])
 
     function handleSubmit() {
@@ -164,21 +201,17 @@ export default function CommentPanel({
 
     return (
         <>
-            
             <div
                 className={`absolute inset-0 z-10 bg-black/40 transition-opacity duration-300 ${open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
                 onClick={onClose}
                 aria-hidden="true"
             />
-
-            
             <div
                 role="complementary"
                 aria-label="Comments"
                 className={`absolute top-0 right-0 bottom-0 z-20 flex flex-col bg-[#080b14] border-l border-white/[0.07] shadow-2xl transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : 'translate-x-full'}`}
                 style={{ width: 'min(360px, 100%)' }}
             >
-                
                 <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] shrink-0">
                     <div className="flex items-center gap-2">
                         <svg className="w-4 h-4 text-accent/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -191,34 +224,26 @@ export default function CommentPanel({
                             </span>
                         )}
                     </div>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        aria-label="Close comments"
-                        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/[0.06] text-white/30 hover:text-white/60 transition-colors"
-                    >
+                    <button type="button" onClick={onClose} aria-label="Close comments"
+                        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/[0.06] text-white/30 hover:text-white/60 transition-colors">
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
-
-                
-                <div ref={listRef} className="flex-1 overflow-y-auto styled-scrollbar">
-                    <CommentList comments={comments} loadingComments={loadingComments} />
-                </div>
-
-                
-                <div className="shrink-0 px-4 py-3 border-t border-white/[0.06] bg-white/[0.01]">
-                    <CommentComposer
-                        user={user}
-                        userProfile={userProfile}
-                        draft={draft}
-                        setDraft={setDraft}
-                        onSubmit={handleSubmit}
-                        submitting={submitting}
-                    />
-                </div>
+                <PanelContent
+                    comments={comments}
+                    loadingComments={loadingComments}
+                    currentUserId={user?.$id}
+                    onDelete={onDeleteComment}
+                    user={user}
+                    userProfile={userProfile}
+                    draft={draft}
+                    setDraft={setDraft}
+                    onSubmit={handleSubmit}
+                    submitting={submitting}
+                    listRef={listRef}
+                />
             </div>
         </>
     )
@@ -234,19 +259,15 @@ export function StandaloneCommentDrawer({
     comments = [],
     loadingComments = false,
     onSubmitComment,
+    onDeleteComment,
     submitting = false,
 }) {
     const [draft, setDraft] = useState('')
     const listRef = useRef(null)
 
+    useEffect(() => { if (!open) setDraft('') }, [open])
     useEffect(() => {
-        if (!open) setDraft('')
-    }, [open])
-
-    useEffect(() => {
-        if (open && listRef.current) {
-            listRef.current.scrollTop = listRef.current.scrollHeight
-        }
+        if (open && listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight
     }, [comments.length, open])
 
     function handleSubmit() {
@@ -258,21 +279,17 @@ export function StandaloneCommentDrawer({
 
     return (
         <>
-            
             <div
                 className={`fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
                 onClick={onClose}
                 aria-hidden="true"
             />
-
-            
             <div
                 role="complementary"
                 aria-label="Comments"
                 className={`fixed top-0 right-0 bottom-0 z-50 flex flex-col bg-[#080b14] border-l border-white/[0.08] shadow-2xl transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : 'translate-x-full'}`}
                 style={{ width: 'min(400px, 100vw)' }}
             >
-                {/* Header */}
                 <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] shrink-0">
                     <div className="flex items-center gap-2">
                         <svg className="w-4 h-4 text-accent/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -280,7 +297,7 @@ export function StandaloneCommentDrawer({
                         </svg>
                         <div>
                             <span className="font-clash font-bold text-sm text-white/80">Comments</span>
-                            {skillTitle && <p className="font-satoshi text-[10px] text-white/30 truncate max-w-[260px]">{skillTitle}</p>}
+                            {skillTitle && <p className="font-satoshi text-[10px] text-white/30 truncate max-w-[240px]">{skillTitle}</p>}
                         </div>
                         {comments.length > 0 && (
                             <span className="font-satoshi text-[10px] text-white/30 bg-white/5 border border-white/10 rounded-full px-2 py-0.5 ml-1">
@@ -288,34 +305,26 @@ export function StandaloneCommentDrawer({
                             </span>
                         )}
                     </div>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        aria-label="Close comments"
-                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/[0.06] text-white/30 hover:text-white/60 transition-colors"
-                    >
+                    <button type="button" onClick={onClose} aria-label="Close comments"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/[0.06] text-white/30 hover:text-white/60 transition-colors">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
-
-                
-                <div ref={listRef} className="flex-1 overflow-y-auto styled-scrollbar px-5 py-4 space-y-5">
-                    <CommentList comments={comments} loadingComments={loadingComments} />
-                </div>
-
-                
-                <div className="shrink-0 px-5 py-4 border-t border-white/[0.06] bg-white/[0.01]">
-                    <CommentComposer
-                        user={user}
-                        userProfile={userProfile}
-                        draft={draft}
-                        setDraft={setDraft}
-                        onSubmit={handleSubmit}
-                        submitting={submitting}
-                    />
-                </div>
+                <PanelContent
+                    comments={comments}
+                    loadingComments={loadingComments}
+                    currentUserId={user?.$id}
+                    onDelete={onDeleteComment}
+                    user={user}
+                    userProfile={userProfile}
+                    draft={draft}
+                    setDraft={setDraft}
+                    onSubmit={handleSubmit}
+                    submitting={submitting}
+                    listRef={listRef}
+                />
             </div>
         </>
     )

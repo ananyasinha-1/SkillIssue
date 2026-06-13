@@ -15,6 +15,7 @@ import SkillViewer from '../components/SkillViewer'
 import SkillActionBar from '../components/SkillActionBar'
 import Toast from '../components/Toast'
 import { StandaloneCommentDrawer } from '../components/CommentPanel'
+import { useComments } from '../hooks/useComments'
 
 // ── Shared markdown component map (mirrors SkillDetailPage) ────────────────
 const MD = {
@@ -45,7 +46,7 @@ const MD = {
 export default function GitHubSkillPage() {
     const [searchParams] = useSearchParams()
     const navigate = useNavigate()
-    const { user: authUser, openAuthModal } = useAuth()
+    const { user: authUser, profile: authProfile, openAuthModal } = useAuth()
 
     const repo = searchParams.get('repo') || ''
     const path = searchParams.get('path') || ''
@@ -73,6 +74,14 @@ export default function GitHubSkillPage() {
     const [viewerContent, setViewerContent] = useState('')
     const [fileLoading, setFileLoading] = useState(false)
     const [commentsOpen, setCommentsOpen] = useState(false)
+    const githubSkillId = repo && path ? `github:${repo}:${path}` : null
+    const { comments, loadingComments, submitting: commentSubmitting, submitComment, removeComment } = useComments({
+        skillId: githubSkillId,
+        skillType: 'github',
+        open: commentsOpen,
+        user: authUser,
+        profile: authProfile,
+    })
 
     const isGuest = !authUser
 
@@ -317,13 +326,15 @@ export default function GitHubSkillPage() {
             <StandaloneCommentDrawer
                 open={commentsOpen}
                 onClose={() => setCommentsOpen(false)}
-                skillId={`github:${repo}:${path}`}
+                skillId={githubSkillId}
                 skillTitle={displayName}
                 user={authUser}
-                userProfile={null}
-                comments={[]}
-                loadingComments={false}
-                onSubmitComment={(text) => { console.log('submit comment:', text) }}
+                userProfile={authProfile}
+                comments={comments}
+                loadingComments={loadingComments}
+                submitting={commentSubmitting}
+                onSubmitComment={submitComment}
+                onDeleteComment={removeComment}
             />
         </>
     )

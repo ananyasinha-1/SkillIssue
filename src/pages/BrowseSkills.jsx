@@ -28,6 +28,7 @@ import ModalShell from '../components/ModalShell'
 import SkillViewer from '../components/SkillViewer'
 import SkillActionBar from '../components/SkillActionBar'
 import CommentPanel, { StandaloneCommentDrawer } from '../components/CommentPanel'
+import { useComments } from '../hooks/useComments'
 
 // ── Skeleton loader ─────────────────────────────────────────────────────
 function SkeletonCard() {
@@ -65,6 +66,14 @@ function SkillModal({ skill, onClose, authUser, authProfile }) {
     const [saveError, setSaveError] = useState(null)
     const [commentsOpen, setCommentsOpen] = useState(false)
     const { openAuthModal } = useAuth()
+    const skillId = skill ? `github:${skill.repo}:${skill.path}` : null
+    const { comments, loadingComments, submitting: commentSubmitting, submitComment, removeComment } = useComments({
+        skillId,
+        skillType: 'github',
+        open: commentsOpen,
+        user: authUser,
+        profile: authProfile,
+    })
 
     useEffect(() => {
         if (!skill) return undefined
@@ -214,13 +223,15 @@ function SkillModal({ skill, onClose, authUser, authProfile }) {
             <CommentPanel
                 open={commentsOpen}
                 onClose={() => setCommentsOpen(false)}
-                skillId={`github:${skill.repo}:${skill.path}`}
+                skillId={skillId}
                 skillTitle={skill.displayName}
                 user={authUser}
                 userProfile={authProfile}
-                comments={[]}
-                loadingComments={false}
-                onSubmitComment={(text) => { console.log('submit comment:', text) }}
+                comments={comments}
+                loadingComments={loadingComments}
+                submitting={commentSubmitting}
+                onSubmitComment={submitComment}
+                onDeleteComment={removeComment}
             />
         </ModalShell>
     )
@@ -230,9 +241,16 @@ function SkillModal({ skill, onClose, authUser, authProfile }) {
 /** Card for skills stored in Appwrite (user-uploaded). Matches OpenClaw CommunityCard design. */
 function DbSkillCard({ skill, uploaderProfile, onClick, index = 0 }) {
     const navigate = useNavigate()
-    const { user, openAuthModal } = useAuth()
+    const { user, profile, openAuthModal } = useAuth()
     const [downloading, setDownloading] = useState(false)
     const [commentsOpen, setCommentsOpen] = useState(false)
+    const { comments, loadingComments, submitting: commentSubmitting, submitComment, removeComment } = useComments({
+        skillId: skill?.$id || skill?.id,
+        skillType: 'db',
+        open: commentsOpen,
+        user,
+        profile,
+    })
     const { title, description, category, star_count = 0, copy_count = 0, $createdAt, created_at } = skill
 
     async function handleDownloadZip(e) {
@@ -421,10 +439,12 @@ function DbSkillCard({ skill, uploaderProfile, onClick, index = 0 }) {
                     skillId={skill.$id || skill.id}
                     skillTitle={title}
                     user={user}
-                    userProfile={null}
-                    comments={[]}
-                    loadingComments={false}
-                    onSubmitComment={(text) => { console.log('submit comment:', text) }}
+                    userProfile={profile}
+                    comments={comments}
+                    loadingComments={loadingComments}
+                    submitting={commentSubmitting}
+                    onSubmitComment={submitComment}
+                    onDeleteComment={removeComment}
                 />
             )}
         </div>

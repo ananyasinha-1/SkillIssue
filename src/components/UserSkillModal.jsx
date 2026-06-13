@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useComments } from '../hooks/useComments'
 import ConfirmDialog from './ConfirmDialog'
 import ModalShell from './ModalShell'
 import SkillActionBar from './SkillActionBar'
@@ -31,6 +32,13 @@ export default function UserSkillModal({ skill, onClose, isOwner = false, onDele
     const [starred, setStarred] = useState(false)
     const [starCount, setStarCount] = useState(0)
     const [commentsOpen, setCommentsOpen] = useState(false)
+    const { comments, loadingComments, submitting: commentSubmitting, submitComment, removeComment } = useComments({
+        skillId: skill?.id,
+        skillType: 'db',
+        open: commentsOpen,
+        user,
+        profile,
+    })
 
     const isGuest = !user
     const isPrivate = skill?.visibility === 'private'
@@ -196,9 +204,11 @@ export default function UserSkillModal({ skill, onClose, isOwner = false, onDele
                     skillTitle={skill.title}
                     user={user}
                     userProfile={profile}
-                    comments={[]}
-                    loadingComments={false}
-                    onSubmitComment={(text) => { console.log('submit comment:', text) }}
+                    comments={comments}
+                    loadingComments={loadingComments}
+                    submitting={commentSubmitting}
+                    onSubmitComment={submitComment}
+                    onDeleteComment={removeComment}
                 />
             </ModalShell>
 
