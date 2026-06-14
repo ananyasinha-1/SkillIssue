@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getCommunityUsers, getPublicSkillsStatsByUser } from '../lib/userService'
+import { useAuth } from '../context/AuthContext'
 import SEO, { jsonLdSchemas } from '../components/SEO'
 import Breadcrumbs from '../components/Breadcrumbs'
 
@@ -82,8 +83,63 @@ function SkeletonUserCard() {
     )
 }
 
+function FollowButton({ userId, currentUserId }) {
+    const [status, setStatus] = useState('none') // TODO: derive from real follow data
+
+    if (!currentUserId || userId === currentUserId) return null
+
+    function handleClick(e) {
+        e.preventDefault()
+        e.stopPropagation()
+        if (status === 'none') {
+            setStatus('pending')
+            // TODO: call backend API — sendFollowRequest(userId)
+        } else if (status === 'pending') {
+            setStatus('none')
+            // TODO: call backend API — cancelFollowRequest(userId)
+        } else if (status === 'following') {
+            setStatus('none')
+            // TODO: call backend API — unfollowUser(userId)
+        }
+    }
+
+    const styles = {
+        none: 'bg-accent/10 border-accent/20 text-accent hover:bg-accent/20 hover:border-accent/40 hover:shadow-[0_0_14px_rgba(75,169,255,0.2)]',
+        pending: 'bg-white/[0.05] border-white/[0.12] text-white/50 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-400',
+        following: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-400',
+    }
+
+    const labels = { none: 'Follow', pending: 'Pending', following: 'Following' }
+    const hoverLabels = { none: 'Follow', pending: 'Cancel', following: 'Unfollow' }
+
+    return (
+        <button
+            onClick={handleClick}
+            className={`group/fb shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border font-satoshi text-xs font-semibold transition-all duration-200 ${styles[status]}`}
+        >
+            {status === 'none' && (
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+            )}
+            {status === 'pending' && (
+                <svg className="w-3 h-3 group-hover/fb:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            )}
+            {status === 'following' && (
+                <svg className="w-3 h-3 group-hover/fb:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+            )}
+            <span className="group-hover/fb:hidden">{labels[status]}</span>
+            <span className="hidden group-hover/fb:inline">{hoverLabels[status]}</span>
+        </button>
+    )
+}
+
 // ── User card ─────────────────────────────────────────────────
-function UserCard({ user, stats, index }) {
+function UserCard({ user, stats, index, currentUserId }) {
     const userStats = stats[user.user_id] || { skills: 0, stars: 0 }
 
     return (
@@ -145,13 +201,16 @@ function UserCard({ user, stats, index }) {
                 </div>
             </div>
 
-            {/* Chevron */}
-            <svg
-                className="w-4 h-4 text-white/15 group-hover:text-accent/50 transition-colors duration-300 shrink-0"
-                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-            >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-            </svg>
+            
+            <div className="flex items-center gap-3 shrink-0">
+                <FollowButton userId={user.user_id} currentUserId={currentUserId} />
+                <svg
+                    className="w-4 h-4 text-white/15 group-hover:text-accent/50 transition-colors duration-300"
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+            </div>
         </Link>
     )
 }
@@ -193,6 +252,8 @@ function sortUsers(users, sortId, stats) {
 const PAGE_SIZE = 12
 
 export default function Community() {
+    const { profile: authProfile } = useAuth()
+    const currentUserId = authProfile?.user_id ?? null
     const [allUsers, setAllUsers] = useState([])
     const [stats, setStats] = useState({})
     const [loading, setLoading] = useState(true)
@@ -432,6 +493,7 @@ export default function Community() {
                                         user={user}
                                         stats={stats}
                                         index={i}
+                                        currentUserId={currentUserId}
                                     />
                                 ))}
                             </div>
