@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getCommunityUsers, getPublicSkillsStatsByUser } from '../lib/userService'
+import { getFollowStatus, sendFollowRequest, unfollowUser } from '../lib/followService'
 import { useAuth } from '../context/AuthContext'
 import SEO, { jsonLdSchemas } from '../components/SEO'
 import Breadcrumbs from '../components/Breadcrumbs'
@@ -84,22 +85,37 @@ function SkeletonUserCard() {
 }
 
 function FollowButton({ userId, currentUserId }) {
-    const [status, setStatus] = useState('none') // TODO: derive from real follow data
+    const [status, setStatus] = useState('none')
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        if (!currentUserId || userId === currentUserId) return
+        setLoading(true)
+        getFollowStatus(userId)
+            .then(s => setStatus(s === 'accepted' ? 'following' : s))
+            .catch(() => setStatus('none'))
+            .finally(() => setLoading(false))
+    }, [userId, currentUserId])
 
     if (!currentUserId || userId === currentUserId) return null
 
-    function handleClick(e) {
+    async function handleClick(e) {
         e.preventDefault()
         e.stopPropagation()
-        if (status === 'none') {
-            setStatus('pending')
-            // TODO: call backend API — sendFollowRequest(userId)
-        } else if (status === 'pending') {
-            setStatus('none')
-            // TODO: call backend API — cancelFollowRequest(userId)
-        } else if (status === 'following') {
-            setStatus('none')
-            // TODO: call backend API — unfollowUser(userId)
+        if (loading) return
+        setLoading(true)
+        try {
+            if (status === 'none') {
+                await sendFollowRequest(userId)
+                setStatus('pending')
+            } else if (status === 'pending' || status === 'following') {
+                await unfollowUser(userId)
+                setStatus('none')
+            }
+        } catch (err) {
+            console.error('FollowButton error:', err)
+        } finally {
+            setLoading(false)
         }
     }
 
@@ -115,7 +131,8 @@ function FollowButton({ userId, currentUserId }) {
     return (
         <button
             onClick={handleClick}
-            className={`group/fb shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border font-satoshi text-xs font-semibold transition-all duration-200 ${styles[status]}`}
+            disabled={loading}
+            className={`group/fb shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border font-satoshi text-xs font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${styles[status]}`}
         >
             {status === 'none' && (
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>

@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Package, Star, UserX, Sprout } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { getProfileByUsername, getProfileStats, getSavedSkills, getSavedSkillsByIds, submitTestimonial, hasSubmittedTestimonial } from '../lib/userService'
+import { getProfileByUsername, getProfileStats, getSavedSkills, getSavedSkillsByIds, submitTestimonial, hasSubmittedTestimonial, getProfilesByUserIds } from '../lib/userService'
+import {loadFollowData,sendFollowRequest,unfollowUser,acceptFollowRequest,rejectFollowRequest,getFollowStatus} from '../lib/followService'
 import { getPublicSkillsByUser, getPrivateSkillsByUser, toggleVisibility, deleteSkill } from '../lib/skillService'
 import SkillCard from '../components/SkillCard'
 import EditProfileModal from '../components/EditProfileModal'
@@ -192,38 +193,52 @@ export default function UserProfile() {
     const [followers, setFollowers] = useState([])
     const [following, setFollowing] = useState([])
     const [pendingRequests, setPendingRequests] = useState([])
+    const [followStatus, setFollowStatus] = useState('none')
+    const [followLoading, setFollowLoading] = useState(false)
 
-    
-    useEffect(() => {
-        setFollowers([
-            { user_id: 'u1', username: 'alex_dev', display_name: 'Alex Dev', avatar_url: null },
-            { user_id: 'u2', username: 'sarah_m', display_name: 'Sarah M', avatar_url: null },
-            { user_id: 'u3', username: 'johnsmith', display_name: 'John Smith', avatar_url: null },
-        ])
-        setFollowing([
-            { user_id: 'u4', username: 'priya_k', display_name: 'Priya K', avatar_url: null },
-            { user_id: 'u5', username: 'leo_codes', display_name: 'Leo Codes', avatar_url: null },
-        ])
-        setPendingRequests([
-            { user_id: 'u6', username: 'maya_ai', display_name: 'Maya AI', avatar_url: null },
-            { user_id: 'u7', username: 'devraj99', display_name: 'Devraj', avatar_url: null },
-        ])
-    }, [username])
-
-    function handleAcceptRequest(userId) {
-        return new Promise(resolve => {
-            const person = pendingRequests.find(p => p.user_id === userId)
-            setPendingRequests(prev => prev.filter(p => p.user_id !== userId))
-            if (person) setFollowers(prev => [...prev, person])
-            resolve()
-        })
+    async function handleFollowToggle() {
+        if (!profile?.user_id || followLoading) return
+        console.log('profile.user_id:', profile.user_id, '| authUser.$id:', authUser?.$id)
+        setFollowLoading(true)
+        try {
+            if (followStatus === 'none') {
+                await sendFollowRequest(profile.user_id)
+                setFollowStatus('pending')
+            } else if (followStatus === 'pending' || followStatus === 'accepted') {
+                await unfollowUser(profile.user_id)
+                setFollowStatus('none')
+                if (followStatus === 'accepted' && authProfile) {
+                    setFollowers(prev => prev.filter(f => f.user_id !== authProfile.user_id))
+                }
+            }
+        } catch (err) {
+            console.error('Follow toggle error:', err)
+        } finally {
+            setFollowLoading(false)
+        }
     }
 
-    function handleRejectRequest(userId) {
-        return new Promise(resolve => {
+    async function handleAcceptRequest(userId) {
+        const person = pendingRequests.find(p => p.user_id === userId)
+        if (!person?.follow_doc_id) return
+        try {
+            await acceptFollowRequest(person.follow_doc_id)
             setPendingRequests(prev => prev.filter(p => p.user_id !== userId))
-            resolve()
-        })
+            setFollowers(prev => [...prev, { ...person, status: 'accepted' }])
+        } catch (err) {
+            console.error('Accept request error:', err)
+        }
+    }
+
+    async function handleRejectRequest(userId) {
+        const person = pendingRequests.find(p => p.user_id === userId)
+        if (!person?.follow_doc_id) return
+        try {
+            await rejectFollowRequest(person.follow_doc_id)
+            setPendingRequests(prev => prev.filter(p => p.user_id !== userId))
+        } catch (err) {
+            console.error('Reject request error:', err)
+        }
     }
 
     const isOwner = authProfile?.username === username
@@ -314,6 +329,29 @@ export default function UserProfile() {
         }
         load()
     }, [username, isOwner, isMockMode, authProfile])
+
+    useEffect(() => {
+        setFollowers([])
+        setFollowing([])
+        setPendingRequests([])
+        setFollowStatus('none')
+
+        if (!profile?.user_id || isMockMode) return
+
+        loadFollowData(profile.user_id, isOwner, getProfilesByUserIds)
+            .then(({ followers: f, following: fw, pendingRequests: pr }) => {
+                setFollowers(f)
+                setFollowing(fw)
+                setPendingRequests(pr)
+            })
+            .catch(err => console.error('loadFollowData error:', err))
+
+        if (!isOwner) {
+            getFollowStatus(profile.user_id)
+                .then(setFollowStatus)
+                .catch(() => setFollowStatus('none'))
+        }
+    }, [profile?.user_id, isOwner, isMockMode])
 
     useEffect(() => {
         if (!profile) return
@@ -525,6 +563,54 @@ export default function UserProfile() {
                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
                                                 </svg>
                                                 Sign Out
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {!isOwner && !loading && authUser && (
+                                        <div className="w-full mt-5">
+                                            <button
+                                                onClick={handleFollowToggle}
+                                                disabled={followLoading}
+                                                className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-satoshi text-sm font-semibold transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed
+                                                    ${followStatus === 'accepted'
+                                                        ? 'border border-accent/30 bg-accent/10 text-accent hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 group/unfollow'
+                                                        : followStatus === 'pending'
+                                                        ? 'border border-yellow-500/25 bg-yellow-500/5 text-yellow-400/80 hover:bg-yellow-500/10 hover:border-yellow-500/35'
+                                                        : 'border border-accent/20 bg-accent/[0.06] text-accent/80 hover:bg-accent/[0.12] hover:border-accent/40 hover:text-accent'
+                                                    }`}
+                                            >
+                                                {followLoading ? (
+                                                    <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                                                    </svg>
+                                                ) : followStatus === 'accepted' ? (
+                                                    <>
+                                                        <svg className="w-3.5 h-3.5 group-hover/unfollow:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                                        </svg>
+                                                        <span className="group-hover/unfollow:hidden">Following</span>
+                                                        <svg className="w-3.5 h-3.5 hidden group-hover/unfollow:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                        <span className="hidden group-hover/unfollow:inline">Unfollow</span>
+                                                    </>
+                                                ) : followStatus === 'pending' ? (
+                                                    <>
+                                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                        Request Pending
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766z" />
+                                                        </svg>
+                                                        Follow
+                                                    </>
+                                                )}
                                             </button>
                                         </div>
                                     )}
