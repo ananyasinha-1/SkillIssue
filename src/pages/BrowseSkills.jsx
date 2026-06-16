@@ -28,6 +28,8 @@ import SkillHoverPreview from '../components/SkillHoverPreview'
 import ModalShell from '../components/ModalShell'
 import SkillViewer from '../components/SkillViewer'
 import SkillActionBar from '../components/SkillActionBar'
+import CommentPanel, { StandaloneCommentDrawer } from '../components/CommentPanel'
+import { useComments } from '../hooks/useComments'
 
 // ── Skeleton loader ─────────────────────────────────────────────────────
 function SkeletonCard() {
@@ -63,7 +65,16 @@ function SkillModal({ skill, onClose, authUser, authProfile }) {
     const [saving, setSaving] = useState(false)
     const [saved, setSaved] = useState(false)
     const [saveError, setSaveError] = useState(null)
+    const [commentsOpen, setCommentsOpen] = useState(false)
     const { openAuthModal } = useAuth()
+    const skillId = skill ? `github:${skill.repo}:${skill.path}` : null
+    const { comments, loadingComments, submitting: commentSubmitting, submitComment, removeComment } = useComments({
+        skillId,
+        skillType: 'github',
+        open: commentsOpen,
+        user: authUser,
+        profile: authProfile,
+    })
 
     useEffect(() => {
         if (!skill) return undefined
@@ -202,6 +213,7 @@ function SkillModal({ skill, onClose, authUser, authProfile }) {
                         { key: 'copy', icon: 'copy', label: copied ? 'Copied!' : 'Copy', ariaLabel: 'Copy skill markdown', onClick: handleCopy, status: copied ? 'success' : undefined },
                         { key: 'share', icon: 'share', label: linkCopied ? 'Link copied!' : 'Share', ariaLabel: 'Share skill link', onClick: handleShare, status: linkCopied ? 'success' : undefined },
                         { key: 'download', icon: 'download', label: downloading ? 'Zipping...' : 'Download .zip', ariaLabel: 'Download skill as zip', onClick: handleDownload, loading: downloading, primary: true },
+                        { key: 'comments', icon: 'comments', label: 'Comments', ariaLabel: 'View comments', onClick: () => setCommentsOpen(o => !o), active: commentsOpen },
                     ]}
                     secondaryActions={[
                         { key: 'github', icon: 'github', label: 'View on GitHub', ariaLabel: 'Open skill on GitHub', href: skill.htmlUrl || skill.attributionUrl },
@@ -209,6 +221,19 @@ function SkillModal({ skill, onClose, authUser, authProfile }) {
                     ]}
                 />
             )}
+            <CommentPanel
+                open={commentsOpen}
+                onClose={() => setCommentsOpen(false)}
+                skillId={skillId}
+                skillTitle={skill.displayName}
+                user={authUser}
+                userProfile={authProfile}
+                comments={comments}
+                loadingComments={loadingComments}
+                submitting={commentSubmitting}
+                onSubmitComment={submitComment}
+                onDeleteComment={removeComment}
+            />
         </ModalShell>
     )
 }
@@ -217,8 +242,16 @@ function SkillModal({ skill, onClose, authUser, authProfile }) {
 /** Card for skills stored in Appwrite (user-uploaded). Matches OpenClaw CommunityCard design. */
 function DbSkillCard({ skill, uploaderProfile, onClick, index = 0 }) {
     const navigate = useNavigate()
-    const { user, openAuthModal } = useAuth()
+    const { user, profile, openAuthModal } = useAuth()
     const [downloading, setDownloading] = useState(false)
+    const [commentsOpen, setCommentsOpen] = useState(false)
+    const { comments, loadingComments, submitting: commentSubmitting, submitComment, removeComment } = useComments({
+        skillId: skill?.$id || skill?.id,
+        skillType: 'db',
+        open: commentsOpen,
+        user,
+        profile,
+    })
     const { title, description, category, star_count = 0, copy_count = 0, $createdAt, created_at } = skill
 
     async function handleDownloadZip(e) {
@@ -379,6 +412,17 @@ function DbSkillCard({ skill, uploaderProfile, onClick, index = 0 }) {
                         )}
                         <span>.zip</span>
                     </button>
+                    
+                    <button
+                        onClick={(e) => { e.stopPropagation(); setCommentsOpen(true); }}
+                        title="Comments"
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-satoshi text-xs font-semibold transition-all duration-300 ${commentsOpen ? 'bg-accent/20 border-accent/40 text-accent' : 'bg-white/[0.03] border-white/10 text-white/50 hover:border-accent/25 hover:bg-white/[0.06] hover:text-white/70'}`}
+                    >
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+                        </svg>
+                        <span>Comments</span>
+                    </button>
                     {/* Category badge */}
                     {category && (
                         <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-satoshi font-bold border ${catStyle} uppercase tracking-wider`}>
@@ -387,6 +431,23 @@ function DbSkillCard({ skill, uploaderProfile, onClick, index = 0 }) {
                     )}
                 </div>
             </div>
+
+            
+            {commentsOpen && (
+                <StandaloneCommentDrawer
+                    open={commentsOpen}
+                    onClose={() => setCommentsOpen(false)}
+                    skillId={skill.$id || skill.id}
+                    skillTitle={title}
+                    user={user}
+                    userProfile={profile}
+                    comments={comments}
+                    loadingComments={loadingComments}
+                    submitting={commentSubmitting}
+                    onSubmitComment={submitComment}
+                    onDeleteComment={removeComment}
+                />
+            )}
         </div>
     )
 }

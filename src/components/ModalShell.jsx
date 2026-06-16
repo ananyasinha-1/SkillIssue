@@ -130,7 +130,7 @@ export default function ModalShell({
                 className={`relative rounded-2xl border border-white/10 bg-navy overflow-hidden flex flex-col animate-fade-in-up outline-none ${panelClassName}`}
                 style={resizable ? { width: size.width, height: size.height, maxWidth: 'calc(100vw - 16px)', maxHeight: 'calc(100vh - 16px)' } : undefined}
             >
-                <div className={contentClassName}>{children}</div>
+                <div className={`relative h-full ${contentClassName}`}>{children}</div>
                 {resizable && (
                     <div
                         onMouseDown={onResizeMouseDown}

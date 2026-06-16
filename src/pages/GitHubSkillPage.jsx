@@ -14,6 +14,8 @@ import Breadcrumbs from '../components/Breadcrumbs'
 import SkillViewer from '../components/SkillViewer'
 import SkillActionBar from '../components/SkillActionBar'
 import Toast from '../components/Toast'
+import { StandaloneCommentDrawer } from '../components/CommentPanel'
+import { useComments } from '../hooks/useComments'
 
 // ── Shared markdown component map (mirrors SkillDetailPage) ────────────────
 const MD = {
@@ -44,7 +46,7 @@ const MD = {
 export default function GitHubSkillPage() {
     const [searchParams] = useSearchParams()
     const navigate = useNavigate()
-    const { user: authUser, openAuthModal } = useAuth()
+    const { user: authUser, profile: authProfile, openAuthModal } = useAuth()
 
     const repo = searchParams.get('repo') || ''
     const path = searchParams.get('path') || ''
@@ -71,6 +73,15 @@ export default function GitHubSkillPage() {
     const [activeContent, setActiveContent] = useState(null)
     const [viewerContent, setViewerContent] = useState('')
     const [fileLoading, setFileLoading] = useState(false)
+    const [commentsOpen, setCommentsOpen] = useState(false)
+    const githubSkillId = repo && path ? `github:${repo}:${path}` : null
+    const { comments, loadingComments, submitting: commentSubmitting, submitComment, removeComment } = useComments({
+        skillId: githubSkillId,
+        skillType: 'github',
+        open: commentsOpen,
+        user: authUser,
+        profile: authProfile,
+    })
 
     const isGuest = !authUser
 
@@ -287,6 +298,7 @@ export default function GitHubSkillPage() {
                             { key: 'copy', icon: 'copy', label: copied ? 'Copied!' : 'Copy', ariaLabel: 'Copy skill markdown', onClick: handleCopy, status: copied ? 'success' : undefined },
                             { key: 'share', icon: 'share', label: linkCopied ? 'Link copied!' : 'Share', ariaLabel: 'Share skill link', onClick: handleShare, status: linkCopied ? 'success' : undefined },
                             { key: 'download', icon: 'download', label: downloading ? 'Zipping...' : '.zip', ariaLabel: 'Download skill as zip', onClick: handleDownload, loading: downloading, primary: true },
+                            { key: 'comments', icon: 'comments', label: 'Comments', ariaLabel: 'View comments', onClick: () => setCommentsOpen(o => !o), active: commentsOpen },
                         ]}
                         secondaryActions={[
                             { key: 'github', icon: 'github', label: 'GitHub', ariaLabel: 'Open skill on GitHub', href: githubUrl },
@@ -310,6 +322,20 @@ export default function GitHubSkillPage() {
 
             {/* ── Toast ── */}
             <Toast message={toast} onDismiss={() => setToast(null)} />
+
+            <StandaloneCommentDrawer
+                open={commentsOpen}
+                onClose={() => setCommentsOpen(false)}
+                skillId={githubSkillId}
+                skillTitle={displayName}
+                user={authUser}
+                userProfile={authProfile}
+                comments={comments}
+                loadingComments={loadingComments}
+                submitting={commentSubmitting}
+                onSubmitComment={submitComment}
+                onDeleteComment={removeComment}
+            />
         </>
     )
 }

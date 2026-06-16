@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { useComments } from '../hooks/useComments'
 import ConfirmDialog from './ConfirmDialog'
 import ModalShell from './ModalShell'
 import SkillActionBar from './SkillActionBar'
 import SkillViewer from './SkillViewer'
+import CommentPanel from './CommentPanel'
 import { useAuth } from '../context/AuthContext'
 import { toggleSavedSkill } from '../lib/userService'
 import { starSkill, unstarSkill } from '../lib/skillService'
@@ -29,6 +31,14 @@ export default function UserSkillModal({ skill, onClose, isOwner = false, onDele
     const [starring, setStarring] = useState(false)
     const [starred, setStarred] = useState(false)
     const [starCount, setStarCount] = useState(0)
+    const [commentsOpen, setCommentsOpen] = useState(false)
+    const { comments, loadingComments, submitting: commentSubmitting, submitComment, removeComment } = useComments({
+        skillId: skill?.id,
+        skillType: 'db',
+        open: commentsOpen,
+        user,
+        profile,
+    })
 
     const isGuest = !user
     const isPrivate = skill?.visibility === 'private'
@@ -178,6 +188,7 @@ export default function UserSkillModal({ skill, onClose, isOwner = false, onDele
                         { key: 'copy', icon: 'copy', label: copied ? 'Copied!' : 'Copy', ariaLabel: 'Copy skill markdown', onClick: handleCopy, status: copied ? 'success' : undefined },
                         { key: 'share', icon: 'share', label: linkCopied ? 'Link copied!' : 'Share', ariaLabel: 'Share skill link', onClick: handleShare, status: linkCopied ? 'success' : undefined },
                         { key: 'download', icon: 'download', label: 'Download .md', ariaLabel: 'Download markdown file', onClick: handleDownload, primary: true },
+                        { key: 'comments', icon: 'comments', label: 'Comments', ariaLabel: 'View comments', onClick: () => setCommentsOpen(o => !o), active: commentsOpen },
                     ]}
                     secondaryActions={[
                         isGuest && { key: 'signin', icon: 'save', label: 'Sign in to Save', ariaLabel: 'Sign in to save skill', onClick: signIn },
@@ -185,6 +196,19 @@ export default function UserSkillModal({ skill, onClose, isOwner = false, onDele
                         isOwner && { key: 'visibility', icon: 'save', label: isPrivate ? 'Make Public' : 'Make Private', ariaLabel: isPrivate ? 'Make skill public' : 'Make skill private', onClick: handleTogglePrivate, disabled: working },
                         isOwner && { key: 'delete', icon: 'copy', label: 'Delete', ariaLabel: 'Delete skill', onClick: () => setShowDeleteConfirm(true), disabled: working, className: 'hover:text-red-400/70 hover:border-red-500/20 hover:bg-red-500/[0.04]' },
                     ]}
+                />
+                <CommentPanel
+                    open={commentsOpen}
+                    onClose={() => setCommentsOpen(false)}
+                    skillId={skill.id}
+                    skillTitle={skill.title}
+                    user={user}
+                    userProfile={profile}
+                    comments={comments}
+                    loadingComments={loadingComments}
+                    submitting={commentSubmitting}
+                    onSubmitComment={submitComment}
+                    onDeleteComment={removeComment}
                 />
             </ModalShell>
 
